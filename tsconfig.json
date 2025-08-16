@@ -1,0 +1,44 @@
+{
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"target": "ES2020",
+		"module": "CommonJS",
+		"moduleResolution": "Node",
+		"resolveJsonModule": true,
+		"lib": [
+			"ES2020",
+			"ES2017",
+			"DOM"
+		],
+
+		"rootDir": "./src",
+		"outDir": "./build",
+		"sourceMap": false,
+		
+		"strict": true,
+		"alwaysStrict": true,
+		"strictFunctionTypes": true,
+		"strictNullChecks": true,
+		"strictPropertyInitialization": true,
+		
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"downlevelIteration": true,
+		"declaration": false,
+
+		"pretty": true
+	},
+	"include": [
+		"typings/**/*",
+		"src/**/*",
+		"src/games/config.ts"
+	]
+}

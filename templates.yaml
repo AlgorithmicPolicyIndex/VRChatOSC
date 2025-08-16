@@ -1,0 +1,31 @@
+﻿# - | will allow you to create multi-lined templates
+# While using only a - will create a single line
+
+playing:
+  - |
+    ૮˶• ﻌ •˶ა
+    I'm mostly mute
+    🎶{song_position}🎶
+    {song_artist} - {song_title}
+  - |
+    ૮( ⸝⸝´꒳`⸝⸝)ა
+    Getting Drunk.
+    🎶{song_position}🎶
+    {song_artist} - {song_title}
+  - |
+    ★ ⁺.
+    
+     (\_(\      /)_/)
+    (      )  (      )
+    /     |    |     \
+    ( O   |    |    O )
+
+notPlaying:
+    - ...Not Playing...
+    - People Watching
+    - Probably Programming
+    - |
+       (\(\
+      ( . .)
+      c(")(")
+      
