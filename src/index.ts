@@ -20,18 +20,11 @@ class VRCOSC {
 	private lastReport: number | null = null;
 	private counter = 0;
 	private loggedNewSong = "";
-	public changeTemplate = false;
-	
-	update() {
-		this.counter++;
-		if ( this.counter % 5 === 0 )  {
-			return osc.changeTemplate = true;
-		}
-		return;
-	}
 	
 	handleTemplate(type: "Playing" | "NotPlaying", music?: Music) {
 		const templatesFile = fs.readFileSync("templates.yaml", "utf8");
+		if (this.counter % 5 === 0)
+			console.log("Template updating...");
 		
 		if (type === "NotPlaying") {
 			const np = parse(templatesFile).notPlaying;
@@ -62,7 +55,7 @@ class VRCOSC {
 			);	
 		});
 		
-		this.changeTemplate = false;
+		this.counter++;
 		return temp;
 	}
 	
@@ -93,9 +86,7 @@ class VRCOSC {
 }
 
 const osc = new VRCOSC();
-setInterval(async () => {
-	osc.update();
-	
+setInterval(async () => {	
 	await PythonShell.run("src/media.py", {mode: "text", pythonOptions: ["-u"]}).then((r) => {
 		const parsedData = JSON.parse(r[0]);
 		if (parsedData.Paused) {
