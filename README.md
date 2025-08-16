@@ -5,7 +5,17 @@ While this may turn into something similar to my [ChatPlays](https://github.com/
 If you would like to know why I made an OSC class, it's because I know I will work more on this to do more with OSC.  
 Especially if people want to create their own custom OSC connections outside just using the chat intput.
 
+# Functions
+- Media, "Now Playing" ChatBox
+
 # To Use
+You will need npm or a similar package manager.
+`npm install`
+
+You will also need [Python](https://www.python.org/downloads/)  
+<sup>This is purely for the fact I use Python to gather Media info</sup>  
+You can install required packages via `pip install -r requirements.txt`
+
 Check out [package.json](package.json) in section "Scripts"  
 There are currently `build` and `start`   
 - `build` Will build the `src` folder to a `build` folder
