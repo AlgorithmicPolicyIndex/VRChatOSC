@@ -1,5 +1,7 @@
 ﻿# - | will allow you to create multi-lined templates
 # While using only a - will create a single line
+# Current placeholders are
+# {song_position}, {song_artist}, {song_title}
 
 playing:
   - |

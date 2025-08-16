@@ -13,3 +13,10 @@ There are currently `build` and `start`
 
 `npm run build && npm run start` will build and start the script in one command.  
 After this you can just run `npm run start` as long as you update the [index.ts](src/index.ts) file.
+
+# Edits
+If you wish to change things, such as adding a custom placeholder, you can do so in the index.ts file.  
+Right now the only available placeholders are in the [Templates](templates.yaml) file:
+- {song_position}
+- {song_artist}
+- {song_title}
