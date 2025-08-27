@@ -9,6 +9,7 @@ Especially if people want to create their own custom OSC connections outside jus
 - Media, "Now Playing" ChatBox
 
 # To Use
+<sup>You can check out the [Releases](https://github.com/AlgorithmicPolicyIndex/VRChatOSC/releases) for the latest version and already built JS and Python File.</sup> 
 You will need npm or a similar package manager.
 `npm install` via [NodeJS](https://nodejs.org/)
 
