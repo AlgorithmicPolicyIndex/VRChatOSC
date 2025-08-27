@@ -10,10 +10,11 @@
   "dependencies": {
     "@nodert-win10-20h1/windows.media.control": "^0.1.0",
     "@types/node-osc": "^9.1.0",
+    "chalk": "^5.6.0",
     "node-osc": "^9.1.5",
     "python-shell": "^5.0.0",
-    "yaml": "^2.8.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@types/node": "^18.19.112"

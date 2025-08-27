@@ -10,7 +10,7 @@ Especially if people want to create their own custom OSC connections outside jus
 
 # To Use
 You will need npm or a similar package manager.
-`npm install`
+`npm install` via [NodeJS](https://nodejs.org/)
 
 You will also need [Python](https://www.python.org/downloads/)  
 <sup>This is purely for the fact I use Python to gather Media info</sup>  

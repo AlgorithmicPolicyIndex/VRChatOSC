@@ -2,6 +2,7 @@ import { Client } from "node-osc";
 import {PythonShell} from 'python-shell';
 import * as fs from 'node:fs';
 import {parse} from 'yaml';
+import chalk from 'chalk';
 
 const client = new Client("127.0.0.1", 9000);
 const placeholders = [
@@ -18,22 +19,26 @@ interface Music {
 class VRCOSC {
 	private displayedTime: number | null = null;
 	private lastReport: number | null = null;
-	private counter = 0;
+	public counter = 0;
 	private loggedNewSong = "";
 	
 	handleTemplate(type: "Playing" | "NotPlaying", music?: Music) {
-		const templatesFile = fs.readFileSync("templates.yaml", "utf8");
+		const templatesFile = parse(fs.readFileSync("templates.yaml", "utf8"));
+		const playing = templatesFile.playing.map((template: string) =>
+			template.replace(/\{(\w+)}/g, '{$1}')
+		);
+		const np = templatesFile.notPlaying;
 		if (this.counter % 5 === 0)
-			console.log("Template updating...");
+			console.log(chalk.blue(`Progressing Template... ${
+				type == "Playing" ? `${this.counter/5 % playing.length + 1} / ${playing.length}` :
+				type == "NotPlaying" ? `${this.counter/5 % np.length + 1} / ${np.length}` :
+				"Unknown Type"
+			}`));
 		
 		if (type === "NotPlaying") {
-			const np = parse(templatesFile).notPlaying;
 			return np[Math.floor(this.counter/5) % np.length];
 		}
 		
-		const playing = parse(templatesFile).playing.map((template: string) => 
-			template.replace(/\{(\w+)}/g, '{$1}')
-		);
 		
 		if (!music)
 			throw new Error("No Music Data in 'Playing' Type");
@@ -54,14 +59,12 @@ class VRCOSC {
 				""
 			);	
 		});
-		
-		this.counter++;
 		return temp;
 	}
 	
 	Playing(music: Music) {
 		if (this.loggedNewSong === "" || this.loggedNewSong !== music.Title) {
-			console.log(`Playing ${music.Title} by ${music.Author}...`);
+			console.log(chalk.green(`Playing ${music.Title} by ${music.Author}...`));
 			this.loggedNewSong = music.Title;
 		}
 		const template = this.handleTemplate("Playing", music);
@@ -69,7 +72,7 @@ class VRCOSC {
 	}
 	notPlaying() {
 		if (this.loggedNewSong !== "") {
-			console.log(`Playing has stopped...`);
+			console.log(chalk.red(`Playing has stopped...`));
 			this.loggedNewSong = "";
 		}
 		const template = this.handleTemplate("NotPlaying");
@@ -87,12 +90,13 @@ class VRCOSC {
 
 const osc = new VRCOSC();
 setInterval(async () => {	
-	await PythonShell.run("src/media.py", {mode: "text", pythonOptions: ["-u"]}).then((r) => {
+	await PythonShell.run("media.py", {mode: "text", pythonOptions: ["-u"]}).then((r) => {
 		const parsedData = JSON.parse(r[0]);
 		if (parsedData.Paused) {
 			osc.notPlaying();
 		} else {
 			osc.Playing(parsedData);
 		}
+		osc.counter++;
 	});
 }, 1500);
