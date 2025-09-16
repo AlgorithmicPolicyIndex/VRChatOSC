@@ -8,6 +8,7 @@
     "start": "node build/index.js"
   },
   "dependencies": {
+    "@coooookies/windows-smtc-monitor": "^1.0.12",
     "@nodert-win10-20h1/windows.media.control": "^0.1.0",
     "@types/node-osc": "^9.1.0",
     "chalk": "^5.6.0",
@@ -18,6 +19,6 @@
     "yaml": "^2.8.1"
   },
   "devDependencies": {
-    "@types/node": "^18.19.123"
+    "@types/node": "^18.19.124"
   }
 }

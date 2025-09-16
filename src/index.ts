@@ -1,9 +1,16 @@
 import { Client } from "node-osc";
-import {PythonShell} from 'python-shell';
 import * as fs from 'node:fs';
 import {parse} from 'yaml';
-import chalk from 'chalk';
 import dbus, {ProxyObject, sessionBus, Variant } from "dbus-next";
+import {PlaybackStatus, SMTCMonitor} from "@coooookies/windows-smtc-monitor";
+import {PythonShell} from "python-shell";
+import path from "node:path";
+
+let _chalk: any;
+async function getChalk() {
+    if (!_chalk) _chalk = (await import("chalk")).default;
+    return _chalk;
+}
 
 const client = new Client("127.0.0.1", 9000);
 const placeholders = [
@@ -17,8 +24,8 @@ interface NowPlaying {
 	Title: string,
 	Position: [number, number],
 	Thumbnail?: string;
-};
-type PlaybackStatus = "Playing" | "Paused" | "Stopped";
+}
+type PlaybackStatusL = "Playing" | "Paused" | "Stopped";
 
 interface Music {
 	Author: string,
@@ -30,7 +37,8 @@ class VRCOSC {
 	private lastReport: number | null = null;
 	public counter = 0;
 	private loggedNewSong = "";
-	
+	private initial = false;
+
 	handleTemplate(type: "Playing" | "NotPlaying", music?: Music) {
 		const templatesFile = parse(fs.readFileSync("templates.yaml", "utf8"));
 		const playing = templatesFile.playing.map((template: string) =>
@@ -38,10 +46,10 @@ class VRCOSC {
 		);
 		const np = templatesFile.notPlaying;
 		if (this.counter % 5 === 0)
-			console.log(chalk.blue(`Progressing Template... ${
-				type == "Playing" ? `${this.counter/5 % playing.length + 1} / ${playing.length}` :
-				type == "NotPlaying" ? `${this.counter/5 % np.length + 1} / ${np.length}` :
-				"Unknown Type"
+			console.log(_chalk.blue(`Progressing Template... ${
+				type == "Playing"
+					? `${this.counter/5 % playing.length + 1} / ${playing.length}`
+					: `${this.counter/5 % np.length + 1} / ${np.length}`
 			}`));
 		
 		if (type === "NotPlaying") {
@@ -72,7 +80,7 @@ class VRCOSC {
 	
 	Playing(music: Music) {
 		if (this.loggedNewSong === "" || this.loggedNewSong !== music.Title) {
-			console.log(chalk.green(`Playing ${music.Title} by ${music.Author}...`));
+			console.log(_chalk.green(`Playing ${music.Title} by ${music.Author}...`));
 			this.loggedNewSong = music.Title;
 		}
 		const template = this.handleTemplate("Playing", music);
@@ -80,7 +88,7 @@ class VRCOSC {
 	}
 	notPlaying() {
 		if (this.loggedNewSong !== "") {
-			console.log(chalk.red(`Playing has stopped...`));
+			console.log(_chalk.red(`Playing has stopped...`));
 			this.loggedNewSong = "";
 		}
 		const template = this.handleTemplate("NotPlaying");
@@ -95,6 +103,24 @@ class VRCOSC {
 		return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 	}
 
+	async WindowsRequest(): Promise<NowPlaying | "np"> {
+		const CurrentMedia = SMTCMonitor.getCurrentMediaSession();
+
+		if (!CurrentMedia) return "np";
+		switch (CurrentMedia.playback.playbackStatus) {
+			case PlaybackStatus.PAUSED: return "np";
+		}
+
+		return {
+			Author: CurrentMedia.media.artist,
+			Title: CurrentMedia.media.title,
+			Position: [
+				CurrentMedia.timeline.position * 1000,
+				CurrentMedia.timeline.duration * 1000
+			]
+		};
+	}
+
 	async listNames(bus: dbus.MessageBus): Promise<string[]> {
 		const obj = await bus.getProxyObject("org.freedesktop.DBus", "/org/freedesktop/DBus");
 		const iface = obj.getInterface("org.freedesktop.DBus") as any;
@@ -106,7 +132,7 @@ class VRCOSC {
 		return obj.getInterface("org.freedesktop.DBus.Properties") as any;
 	}
 
-	async musicRequest(): Promise<NowPlaying | "np"> {
+	async LinuxRequest(): Promise<NowPlaying | "np"> {
 		const uid = process.getuid?.() ?? Number(process.env.UID || 1000);
 		const runtime = process.env.XDG_RUNTIME_DIR || `run/user/${uid}`;
 		const addr = `unix:path=${runtime}/bus`;
@@ -115,10 +141,8 @@ class VRCOSC {
 		
 		const names = await this.listNames(bus);
 		const players = names.filter(n => n.startsWith("org.mpris.MediaPlayer2."));
-		
-		// Prefer firefox if present, else first player
-		const firefox = players.find(n => /^org\.mpris\.MediaPlayer2\.firefox\./.test(n));
-		const chosen = firefox || players[0];
+
+		const chosen = players[0];
 		if (!chosen) {
 			return "np";
 		}
@@ -126,7 +150,7 @@ class VRCOSC {
 		const props = await this.getProps(bus, chosen);
 		
 		const statusVar: Variant = await props.Get("org.mpris.MediaPlayer2.Player", "PlaybackStatus");
-		const status = statusVar.value as PlaybackStatus;
+		const status = statusVar.value as PlaybackStatusL;
 		
 		const mdVar: Variant = await props.Get("org.mpris.MediaPlayer2.Player", "Metadata");
 		const md = mdVar.value as Record<string, unknown>;
@@ -135,9 +159,7 @@ class VRCOSC {
 		const artistArr = (md["xesam:artist"] as Variant);
 		const artist = artistArr.value[0] || "";
 		
-		if (status !== "Playing") {
-			return "np";
-		}
+		if (status !== "Playing") return "np";
 		
 		const lengthUs = Number((md["mpris:length"] as Variant).value || 0);
 		const posVar: Variant = await props.Get("org.mpris.MediaPlayer2.Player", "Position");
@@ -150,27 +172,41 @@ class VRCOSC {
 			Position: lengthUs > 0 ? [usToMs(posUs), usToMs(lengthUs)] : ["LIVE"]
 		};
 		
+		if (!this.initial) {
+			console.error(`BUS: ${addr}\nPlayers: ${players}\nStatus: ${status}\nSong Data: ${JSON.stringify(out)}\n`);
+			this.initial = true;
+		}
+
 		return out;
 	}
 }
 
+// ! Update this if WindowsRequest() does not work correctly for you. This will fall back to the Python Script. ! //
+const usePython = false;
 const osc = new VRCOSC();
 setInterval(async () => {
-	if (process.platform != "win32") {
-		const music = await osc.musicRequest();
-		if (music == "np")
-			osc.notPlaying();
-		else
-			osc.Playing(music);
-	} else {
-		await PythonShell.run("media.py", {mode: "text", pythonOptions: ["-u"]}).then((r) => {
-			const parsedData = JSON.parse(r[0]);
-			if (parsedData.Paused) {
+	await getChalk();
+	if (process.platform != "win32" && process.platform != "linux") throw new Error(`Platform ${process.platform} is not supported.\nFeel free to create a PR to add support.`);
+
+	if (usePython) {
+		console.log("Using Python...");
+		await PythonShell.run(path.join(__dirname, "..", "src", "media.py"), { mode: "text", pythonOptions: ["-u"]}).then(result => {
+			const pymusic = JSON.parse(result[0]);
+			if (pymusic == "np")
 				osc.notPlaying();
-			} else {
-				osc.Playing(parsedData);
+			else {
+				osc.Playing(pymusic);
 			}
+			osc.counter++;
 		});
+		return;
+	}
+
+	const music: NowPlaying | "np" = process.platform == "win32" ? await osc.WindowsRequest() : await osc.LinuxRequest();
+	if (music == "np")
+		osc.notPlaying();
+	else {
+		osc.Playing(music);
 	}
 	osc.counter++;
 }, 1500);
