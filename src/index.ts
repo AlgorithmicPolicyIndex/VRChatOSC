@@ -33,18 +33,45 @@ interface Music {
 	Position: [number, number]
 }
 class VRCOSC {
+	private yaml = parse(fs.readFileSync("templates.yaml", "utf8"));
 	private displayedTime: number | null = null;
 	private lastReport: number | null = null;
-	public counter = 0;
+	private counter = 0;
 	private loggedNewSong = "";
 	private initial = false;
 
+	constructor() {
+		getChalk();
+		setInterval(async () => {
+			await this.run();
+		}, 1500);
+	}
+
+	async run() {
+		let request: Music | "np" = "np";
+		if (process.platform === "linux") {
+			request = await this.LinuxRequest();
+		} else if (process.platform === "win32") {
+			if (this.yaml.usePython as string) {
+				request = await this.pythonRequest();
+			} else {
+				request = await this.WindowsRequest();
+			}
+		}
+
+		if (request == "np") {
+			this.notPlaying();
+		} else {
+			this.Playing(request);
+		}
+		++this.counter;
+	}
+
 	handleTemplate(type: "Playing" | "NotPlaying", music?: Music) {
-		const templatesFile = parse(fs.readFileSync("templates.yaml", "utf8"));
-		const playing = templatesFile.playing.map((template: string) =>
+		const playing = this.yaml.playing.map((template: string) =>
 			template.replace(/\{(\w+)}/g, '{$1}')
 		);
-		const np = templatesFile.notPlaying;
+		const np = this.yaml.notPlaying;
 		if (this.counter % 5 === 0)
 			console.log(_chalk.blue(`Progressing Template... ${
 				type == "Playing"
@@ -120,6 +147,12 @@ class VRCOSC {
 			]
 		};
 	}
+	async pythonRequest(): Promise<Music> {
+		return await PythonShell.run(path.join(__dirname, "..", "src", "media.py"), { mode: "text", pythonOptions: ["-u"]}).then(result => {
+			console.log("Using Python...");
+			return JSON.parse(result[0]);
+		});
+	}
 
 	async listNames(bus: dbus.MessageBus): Promise<string[]> {
 		const obj = await bus.getProxyObject("org.freedesktop.DBus", "/org/freedesktop/DBus");
@@ -181,32 +214,4 @@ class VRCOSC {
 	}
 }
 
-// ! Update this if WindowsRequest() does not work correctly for you. This will fall back to the Python Script. ! //
-const usePython = false;
-const osc = new VRCOSC();
-setInterval(async () => {
-	await getChalk();
-	if (process.platform != "win32" && process.platform != "linux") throw new Error(`Platform ${process.platform} is not supported.\nFeel free to create a PR to add support.`);
-
-	if (usePython) {
-		console.log("Using Python...");
-		await PythonShell.run(path.join(__dirname, "..", "src", "media.py"), { mode: "text", pythonOptions: ["-u"]}).then(result => {
-			const pymusic = JSON.parse(result[0]);
-			if (pymusic == "np")
-				osc.notPlaying();
-			else {
-				osc.Playing(pymusic);
-			}
-			osc.counter++;
-		});
-		return;
-	}
-
-	const music: NowPlaying | "np" = process.platform == "win32" ? await osc.WindowsRequest() : await osc.LinuxRequest();
-	if (music == "np")
-		osc.notPlaying();
-	else {
-		osc.Playing(music);
-	}
-	osc.counter++;
-}, 1500);
+new VRCOSC();

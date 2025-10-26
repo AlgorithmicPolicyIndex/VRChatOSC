@@ -1,8 +1,12 @@
-﻿# - | will allow you to create multi-lined templates
+﻿# Selects between Python or not. If the standard method for Media does not work, attempt to use Python.
+# WinSDK is the package I use, if it does not install, please follow the error it spits out.
+# https://pypi.org/project/winsdk
+usePython: false
+
+# - | will allow you to create multi-lined templates
 # While using only a - will create a single line
 # Current placeholders are
 # {song_position}, {song_artist}, {song_title}
-
 playing:
   - |
     ૮˶• ﻌ •˶ა
