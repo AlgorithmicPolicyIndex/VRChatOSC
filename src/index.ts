@@ -102,6 +102,14 @@ class VRCOSC {
 				""
 			);	
 		});
+
+		// TODO: This is for only just some characters that VRChat doesn't handle. The characters in the template examples are all visible in VRChat
+		// const reg = /[^\x00-\x7F]+/g;
+		// if (reg.test(temp)) {
+		// 	console.log(`This Template contains non-ascii characters and will be stripped from the string.\nList of characters: ${temp.match(reg)}\nTemplate: ${type}\n${temp}`);
+		// 	temp.replace(reg, "");
+		// }
+		if (temp.length > 144) throw new Error(`Unable to use Template: ${type}\n${temp}`);
 		return temp;
 	}
 	
